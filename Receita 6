@@ -4,30 +4,93 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 class DataService {
-  final ValueNotifier<List> tableStateNotifier = new ValueNotifier([]);
-  
-  void carregar(int index) {
-    if (index == 1) carregarCervejas();
+  final ValueNotifier<Map<String, dynamic>> tableStateNotifier = ValueNotifier({
+    'dataObjects': [],
+    'propertyNames': [],
+    'columnNames': [],
+  });
+
+  // List of functions to load data
+  final List<VoidCallback> funcoes = [];
+
+  DataService() {
+    funcoes.addAll([carregarSucos, carregarCamisas, carregarBrinquedos]);
   }
 
-  void carregarCervejas() {
-    tableStateNotifier.value = [
-      {
-        "name": "La Fin Du Monde",
-        "style": "Bock",
-        "ibu": "65"
-      },
-      {
-        "name": "Sapporo Premiume",
-        "style": "Sour Ale",
-        "ibu": "54"
-      },
-      {
-        "name": "Duvel",
-        "style": "Pilsner",
-        "ibu": "82"
-      }
-    ];
+  void carregar(index) {
+    funcoes[index]();
+  }
+
+  void carregarSucos() {
+    tableStateNotifier.value = {
+      'dataObjects': [
+        {
+          "name": "Suco de Laranja",
+          "origin": "Brasil",
+          "type": "Cítrico"
+        },
+        {
+          "name": "Suco de Maçã",
+          "origin": "USA",
+          "type": "Doce"
+        },
+        {
+          "name": "Suco de Uva",
+          "origin": "Itália",
+          "type": "Cítrico"
+        }
+      ],
+      'propertyNames': ["name", "origin", "type"],
+      'columnNames': ["Nome", "Origem", "Tipo"],
+    };
+  }
+
+  void carregarCamisas() {
+    tableStateNotifier.value = {
+      'dataObjects': [
+        {
+          "name": "Camisa Social",
+          "color": "Branca",
+          "size": "M"
+        },
+        {
+          "name": "Camisa Polo",
+          "color": "Azul",
+          "size": "G"
+        },
+        {
+          "name": "Camisa T-Shirt",
+          "color": "Preta",
+          "size": "P"
+        }
+      ],
+      'propertyNames': ["name", "color", "size"],
+      'columnNames': ["Nome", "Cor", "Tamanho"],
+    };
+  }
+
+  void carregarBrinquedos() {
+    tableStateNotifier.value = {
+      'dataObjects': [
+        {
+          "name": "Lego",
+          "type": "Blocos de Montar",
+          "age_group": "3+"
+        },
+        {
+          "name": "Boneca Barbie",
+          "type": "Boneca",
+          "age_group": "5+"
+        },
+        {
+          "name": "Carrinho Hot Wheels",
+          "type": "Carrinho",
+          "age_group": "4+"
+        }
+      ],
+      'propertyNames': ["name", "type", "age_group"],
+      'columnNames': ["Nome", "Tipo", "Faixa Etária"],
+    };
   }
 }
 
@@ -52,13 +115,14 @@ class MyApp extends StatelessWidget {
           valueListenable: dataService.tableStateNotifier,
           builder: (_, value, __) {
             return DataTableWidget(
-              jsonObjects: value,
-              propertyNames: ["name", "style", "ibu"],
-              columnNames: ["Nome", "Estilo", "IBU"]
+              jsonObjects: value['dataObjects'],
+              propertyNames: value['propertyNames'],
+              columnNames: value['columnNames'],
             );
-          }
+          },
         ),
-        bottomNavigationBar: NewNavBar(itemSelectedCallback: dataService.carregar),
+        bottomNavigationBar:
+            NewNavBar(itemSelectedCallback: dataService.carregar),
       ),
     );
   }
@@ -66,15 +130,11 @@ class MyApp extends StatelessWidget {
 
 class NewNavBar extends HookWidget {
   final void Function(int) itemSelectedCallback;
-  
-  NewNavBar({this.itemSelectedCallback}) {
-    itemSelectedCallback ??= (_) {};
-  }
+  NewNavBar({required this.itemSelectedCallback});
 
   @override
   Widget build(BuildContext context) {
-    var state = useState(1);
-
+    var state = useState(0);
     return BottomNavigationBar(
       onTap: (index) {
         state.value = index;
@@ -83,17 +143,13 @@ class NewNavBar extends HookWidget {
       currentIndex: state.value,
       items: const [
         BottomNavigationBarItem(
-          label: "Cafés",
-          icon: Icon(Icons.coffee_outlined),
-        ),
-        BottomNavigationBarItem(
-          label: "Cervejas",
+          label: "Sucos",
           icon: Icon(Icons.local_drink_outlined),
         ),
         BottomNavigationBarItem(
-          label: "Nações",
-          icon: Icon(Icons.flag_outlined),
-        ),
+            label: "Camisas", icon: Icon(Icons.local_offer_outlined)),
+        BottomNavigationBarItem(
+            label: "Brinquedos", icon: Icon(Icons.toys_outlined))
       ],
     );
   }
@@ -104,29 +160,26 @@ class DataTableWidget extends StatelessWidget {
   final List<String> columnNames;
   final List<String> propertyNames;
 
-  DataTableWidget({
-    this.jsonObjects = const [],
-    this.columnNames = const ["Nome", "Estilo", "IBU"],
-    this.propertyNames = const ["name", "style", "ibu"],
-  });
+  DataTableWidget(
+      {this.jsonObjects = const [],
+      this.columnNames = const ["Nome", "Tipo", "Faixa Etária"],
+      this.propertyNames = const ["name", "type", "age_group"]});
 
   @override
   Widget build(BuildContext context) {
     return DataTable(
-      columns: columnNames.map(
-        (name) => DataColumn(
-          label: Expanded(
-            child: Text(name, style: TextStyle(fontStyle: FontStyle.italic)),
-          ),
-        ),
-      ).toList(),
-      rows: jsonObjects.map(
-        (obj) => DataRow(
-          cells: propertyNames.map(
-            (propName) => DataCell(Text(obj[propName])),
-          ).toList(),
-        ),
-      ).toList(),
+      columns: columnNames
+          .map((name) => DataColumn(
+                  label: Expanded(
+                      child: Text(name,
+                          style: TextStyle(fontStyle: FontStyle.italic)))))
+          .toList(),
+      rows: jsonObjects
+          .map((obj) => DataRow(
+                  cells: propertyNames
+                      .map((propName) => DataCell(Text(obj[propName])))
+                      .toList()))
+          .toList(),
     );
   }
 }
